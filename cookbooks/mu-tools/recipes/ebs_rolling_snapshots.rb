@@ -28,13 +28,21 @@ snap_string << " --exclude_devices '#{node['ebs_snapshots']['exclude_devices'].j
 
 case node['platform']
 when "windows"
+  pip_executable = 'C:\Python27\Scripts\pip'
+
+  unless node.attribute?('python') &&node['python']['pip_binary'].eql?(pip_executable)
+    node.default['python']['pip_binary'] = pip_executable
+
+    node.save
+  end
+
   cookbook_file "#{Chef::Config[:file_cache_path]}/ebs_snapshots.py" do
     source 'ebs_snapshots.py'
   end
 
   ['boto', 'requests'].each do |pkg|
     execute "Installing #{pkg}" do
-      command "#{node['python']['pip_binary']} install #{pkg} --upgrade"
+      command "#{pip_executable} install #{pkg} --upgrade"
       not_if "echo %path% | find /I \"#{node['python']['prefix_dir']}\\python#{node['python']['major_version']}\\Scripts\""
     end
   end
@@ -48,7 +56,7 @@ when "windows"
 
   windows_task 'daily-snapshots' do
     user "SYSTEM"
-    command "python #{Chef::Config[:file_cache_path]}\\ebs_snapshots.py #{snap_string}"
+    command "C:\\bin\\python\\python27\\python.exe #{Chef::Config[:file_cache_path]}\\ebs_snapshots.py #{snap_string}"
     run_level :highest
     frequency :daily
     start_time "06:00"
