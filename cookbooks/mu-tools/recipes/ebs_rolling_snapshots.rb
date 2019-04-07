@@ -26,6 +26,18 @@ snap_string = "--num_snaps_keep #{node['ebs_snapshots']['days_to_keep']}"
 snap_string << " --device_name #{node['ebs_snapshots']['device_name']}" if node['ebs_snapshots']['device_name']
 snap_string << " --exclude_devices '#{node['ebs_snapshots']['exclude_devices'].join(', ')}'" if !node['ebs_snapshots']['exclude_devices'].empty?
 
+fqdn = node['fqdn']
+
+monthly = node['ebs_snapshots']['monthly']
+
+freq = :daily
+
+monthly.each do |name|
+  freq = :monthly if fqdn.downcase.include? name
+end
+
+Chef::Log.info "Frequency = #{freq}"
+
 case node['platform']
 when "windows"
   pip_executable = 'C:\Python27\Scripts\pip'
@@ -54,12 +66,27 @@ when "windows"
     end
   end
 
-  windows_task 'daily-snapshots' do
-    user "SYSTEM"
-    command "C:\\bin\\python\\python27\\python.exe #{Chef::Config[:file_cache_path]}\\ebs_snapshots.py #{snap_string}"
-    run_level :highest
-    frequency :daily
-    start_time "06:00"
+  if freq.eql? :monthly
+    windows_task 'monthly-snapshots' do
+      user "SYSTEM"
+      command    "C:\\bin\\python\\python27\\python.exe #{Chef::Config[:file_cache_path]}\\ebs_snapshots.py #{snap_string}"
+      run_level  :highest
+      frequency  :monthly
+      day        1
+      start_time "06:00"
+    end
+
+    windows_task 'daily-snapshots' do
+      action :delete
+    end
+  else
+    windows_task 'daily-snapshots' do
+      user "SYSTEM"
+      command "C:\\bin\\python\\python27\\python.exe #{Chef::Config[:file_cache_path]}\\ebs_snapshots.py #{snap_string}"
+      run_level :highest
+      frequency :daily
+      start_time "06:00"
+    end
   end
 else
   cookbook_file "/opt/ebs_snapshots.py" do
@@ -73,11 +100,31 @@ else
   end
 
   snap_string << " --logfile /var/log/ebs_snapshots.log"
-  cron "Nightly rotate snapshot" do
-    action :create
-    minute "10"
-    hour "6"
-    user "root"
-    command "python /opt/ebs_snapshots.py #{snap_string}"
+  
+  cron 'Nightly rotate snapshot' do
+    action :delete
+  end
+
+  if freq.eql? :monthly
+    cron "Monthly snapshot" do
+      action :create
+      day '1'
+      minute "10"
+      hour "6"
+      user "root"
+      command "python /opt/ebs_snapshots.py #{snap_string}"
+    end
+
+    cron "Daily Snapshot" do
+      action :delete
+    end
+  else
+    cron "Daily snapshot" do
+      action :create
+      minute "10"
+      hour "6"
+      user "root"
+      command "python /opt/ebs_snapshots.py #{snap_string}"
+    end
   end
 end
