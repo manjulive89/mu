@@ -6,6 +6,8 @@ import boto
 import boto.ec2
 import boto.utils
 import requests
+from random import randint
+from time import sleep
 
 parser = argparse.ArgumentParser(
     description='Script to automaticly snapshot EBS volumes',
@@ -50,21 +52,44 @@ class ebs_snapshot:
     def get_volumes(self):
         volumes = []
         volume_filters = {'attachment.instance-id': self.instance_id}
-        try:
-            volumes = self.ec2.get_all_volumes(filters=volume_filters)
-        except boto.exception.EC2ResponseError as err:
-            logger.exception('Failed to authenticate to AWS {err}'.format(err=err.message))
-            raise err
+
+
+        tries = 5
+        
+        for i in range(tries):
+            try:
+                volumes = self.ec2.get_all_volumes(filters=volume_filters)
+            except boto.exception.EC2ResponseError as err:
+                logger.exception('{num}/{max}: Failed to authenticate to AWS {err}'.format(num=i+1,max=tries,err=err.message))
+
+                sleep(2^i/10)
+
+                if i < tries - 1:
+                    continue
+                else:
+                    logger.exception('Failed to authenticate to AWS {err}, exiting'.format(err=err.message))
+                    break
 
         return volumes
 
     def create_snapshot(self, volume):
         date = datetime.datetime.utcnow().strftime('%m%d%Y-%H%M')
-        try:
-            new_snapshot = volume.create_snapshot('{snapshot_description} on {date}'.format(snapshot_description=self.description_tag, date=date))
-        except boto.exception.EC2ResponseError as err:
-            logger.exception('Failed to create snapshot {err}'.format(err=err.message))
-            raise err
+
+        tries = 5
+        
+        for i in range(tries):
+            try:
+                new_snapshot = volume.create_snapshot('{snapshot_description} on {date}'.format(snapshot_description=self.description_tag, date=date))
+            except boto.exception.EC2ResponseError as err:
+                logger.exception('{num}/{max}: Failed to create snapshot {err}'.format(num=i+1,max=tries,err=err.message))
+
+                sleep(2^i/10)
+
+                if i < tries - 1:
+                    continue
+                else:
+                    logger.exception('Failed to create snapshot {err}, exiting'.format(err=err.message))
+                    break
 
         if self.name_tag:
             snap_tag = self.name_tag
@@ -73,13 +98,63 @@ class ebs_snapshot:
         else:
             snap_tag = "{volume_id}-{device_name}-{instance_id}".format(volume_id=volume.id, instance_id=self.instance_id, device_name=volume.attach_data.device.upper())
 
-        new_snapshot.add_tag('Name', snap_tag)
-        new_snapshot.add_tag('SnapshotType', 'Automated-Snapshots')
-        new_snapshot.add_tag('Attachment-Device', volume.attach_data.device.upper())
+        for i in range(tries):
+            try:
+                new_snapshot.add_tag('Name', snap_tag)
+            except boto.exception.EC2ResponseError as err:
+                logger.exception('{num}/{max}: Failed to add tag {err}'.format(num=i+1,max=tries,err=err.message))
+
+                sleep(2^i/10)
+
+                if i < tries - 1:
+                    continue
+                else:
+                    logger.exception('Failed to add tag {err}, exiting'.format(err=err.message))
+                    break
+
+        for i in range(tries):
+            try:
+                new_snapshot.add_tag('SnapshotType', 'Automated-Snapshots')
+            except boto.exception.EC2ResponseError as err:
+                logger.exception('{num}/{max}: Failed to add tag {err}'.format(num=i+1,max=tries,err=err.message))
+
+                sleep(2^i/10)
+
+                if i < tries - 1:
+                    continue
+                else:
+                    logger.exception('Failed to add tag {err}, exiting'.format(err=err.message))
+                    break
+
+        for i in range(tries):
+            try:
+                new_snapshot.add_tag('Attachment-Device', volume.attach_data.device.upper())
+            except boto.exception.EC2ResponseError as err:
+                logger.exception('{num}/{max}: Failed to add tag {err}'.format(num=i+1,max=tries,err=err.message))
+
+                sleep(2^i/10)
+
+                if i < tries - 1:
+                    continue
+                else:
+                    logger.exception('Failed to add tag {err}, exiting'.format(err=err.message))
+                    break
 
         for tag_key in volume.tags:
-            if tag_key != "Name":
-                new_snapshot.add_tag(tag_key, volume.tags[tag_key])
+            for i in range(tries):
+                try:
+                    if tag_key != "Name":
+                        new_snapshot.add_tag(tag_key, volume.tags[tag_key])
+                except boto.exception.EC2ResponseError as err:
+                    logger.exception('{num}/{max}: Failed to add tag {err}'.format(num=i+1,max=tries,err=err.message))
+
+                    sleep(2^i/10)
+
+                    if i < tries - 1:
+                        continue
+                    else:
+                        logger.exception('Failed to add tag {err}, exiting'.format(err=err.message))
+                        break
 
         logger.info('Snapshot {snap_id}/{snap_name} Created'.format(snap_id=new_snapshot.id, snap_name=new_snapshot.tags['Name']))
 
