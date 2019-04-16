@@ -40,9 +40,18 @@ Chef::Log.info "Frequency = #{freq}"
 
 case node['platform']
 when "windows"
-  pip_executable = 'C:\Python27\Scripts\pip'
 
-  unless node.attribute?('python') &&node['python']['pip_binary'].eql?(pip_executable)
+  python_executable = 'C:\\Python27\\python.exe'
+
+  if File.exist? python_executable
+    pip_executable = 'C:\\Python27\\Scripts\\pip'
+  else
+    python_executable = 'C:\\bin\\python\\python27\\python.exe'
+
+    pip_executable = 'C:\\bin\\python\\python27\\Scripts\\pip'
+  end
+
+  unless node.attribute?('python') && node['python']['pip_binary'].eql?(pip_executable)
     node.default['python']['pip_binary'] = pip_executable
 
     node.save
@@ -69,7 +78,7 @@ when "windows"
   if freq.eql? :monthly
     windows_task 'monthly-snapshots' do
       user "SYSTEM"
-      command    "C:\\bin\\python\\python27\\python.exe #{Chef::Config[:file_cache_path]}\\ebs_snapshots.py #{snap_string}"
+      command    "#{python_executable} #{Chef::Config[:file_cache_path]}\\ebs_snapshots.py #{snap_string}"
       run_level  :highest
       frequency  :monthly
       day        1
@@ -82,7 +91,7 @@ when "windows"
   else
     windows_task 'daily-snapshots' do
       user "SYSTEM"
-      command "C:\\bin\\python\\python27\\python.exe #{Chef::Config[:file_cache_path]}\\ebs_snapshots.py #{snap_string}"
+      command "#{python_executable} #{Chef::Config[:file_cache_path]}\\ebs_snapshots.py #{snap_string}"
       run_level :highest
       frequency :daily
       start_time "06:00"
