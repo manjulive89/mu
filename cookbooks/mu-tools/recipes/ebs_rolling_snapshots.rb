@@ -21,7 +21,6 @@
 # Unless -d/--device_name is specified will snapshot all volumes except for the following:
 # On Windows /dev/sda1. On Linux /dev/sda1,/dev/sda, /dev/xvdn, /dev/xvdo, /dev/xvdp, /dev/xvdq, xvdn, xvdo, xvdp, xvdq
 
-include_recipe "poise-python"
 snap_string = "--num_snaps_keep #{node['ebs_snapshots']['days_to_keep']}"
 snap_string << " --device_name #{node['ebs_snapshots']['device_name']}" if node['ebs_snapshots']['device_name']
 snap_string << " --exclude_devices '#{node['ebs_snapshots']['exclude_devices'].join(', ')}'" if !node['ebs_snapshots']['exclude_devices'].empty?
@@ -37,6 +36,10 @@ monthly.each do |name|
 end
 
 Chef::Log.info "Frequency = #{freq}"
+
+python_runtime '2' do
+  options pip_version: '18.0'
+end
 
 case node['platform']
 when "windows"
@@ -117,7 +120,7 @@ else
   if freq.eql? :monthly
     cron "Monthly snapshot" do
       action :create
-      day '1'
+      day '10'
       minute "10"
       hour "6"
       user "root"

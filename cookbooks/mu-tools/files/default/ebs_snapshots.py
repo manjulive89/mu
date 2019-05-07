@@ -19,6 +19,7 @@ parser.add_argument('-n', '--num_snaps_keep', metavar='', help='Number of Snapsh
 parser.add_argument('-l', '--logfile', metavar='', help='Location of logfile', type=str, default='ebs_snapshots.log')
 parser.add_argument('-d', '--device_name', metavar='', help='Device name of EBS volume. If not specified, a snapshot will be created to all attached volumes', type=str, default=None)
 parser.add_argument('-x', '--exclude_devices', metavar='', help='Mounted volumes endpoints to exclude from automated snapshtos', type=str, default='/dev/sda1, /dev/sda, /dev/xvdn, /dev/xvdo, /dev/xvdp, /dev/xvdq, xvdn, xvdo, xvdp, xvdq')
+parser.add_argument('-t', '--tries', metavar='', help='Number of Retries to attempt', type=int, default=10)
 parser.add_argument('-dt', '--desc_tag', metavar='', help='Description tag for new snapshot', type=str, default='Created by Automated Snapshot Script')
 parser.add_argument('-nt', '--name_tag', metavar='', help='Name tag for the new snapshots', type=str, default=None)
 parsed_args = parser.parse_args()
@@ -37,7 +38,9 @@ formatter = logging.Formatter('%(name)-10s: %(levelname)-8s %(message)s')
 console_log.setFormatter(formatter)
 logging.getLogger('').addHandler(console_log)
 logger = logging.getLogger('logger')
+
 base = 300
+tries = args.tries
 
 class ebs_snapshot:
     def __init__(self, args=parsed_args):
@@ -55,13 +58,14 @@ class ebs_snapshot:
         volume_filters = {'attachment.instance-id': self.instance_id}
 
 
-        tries = 5
         
         for i in range(tries):
             try:
                 volumes = self.ec2.get_all_volumes(filters=volume_filters)
                 break
-            except boto.exception.EC2ResponseError as err:
+            except:
+                err = sys.exc_info()[0]
+
                 logger.exception('{num}/{max}: Failed to authenticate to AWS {err}'.format(num=i+1,max=tries,err=err.message))
 
                 sleep(randint(0,min(1800,(2**i)*base)))
@@ -76,14 +80,13 @@ class ebs_snapshot:
 
     def create_snapshot(self, volume):
         date = datetime.datetime.utcnow().strftime('%m%d%Y-%H%M')
-
-        tries = 5
         
         for i in range(tries):
             try:
                 new_snapshot = volume.create_snapshot('{snapshot_description} on {date}'.format(snapshot_description=self.description_tag, date=date))
                 break
-            except boto.exception.EC2ResponseError as err:
+            except:
+                err = sys.exc_info()[0]
                 logger.exception('{num}/{max}: Failed to create snapshot {err}'.format(num=i+1,max=tries,err=err.message))
 
                 sleep(randint(0,min(1800,(2**i)*base)))
@@ -105,7 +108,8 @@ class ebs_snapshot:
             try:
                 new_snapshot.add_tag('Name', snap_tag)
                 break
-            except boto.exception.EC2ResponseError as err:
+            except:
+                err = sys.exc_info()[0]
                 logger.exception('{num}/{max}: Failed to add tag {err}'.format(num=i+1,max=tries,err=err.message))
 
                 sleep(randint(0,min(1800,(2**i)*base)))
@@ -120,7 +124,8 @@ class ebs_snapshot:
             try:
                 new_snapshot.add_tag('SnapshotType', 'Automated-Snapshots')
                 break
-            except boto.exception.EC2ResponseError as err:
+            except:
+                err = sys.exc_info()[0]
                 logger.exception('{num}/{max}: Failed to add tag {err}'.format(num=i+1,max=tries,err=err.message))
 
                 sleep(randint(0,min(1800,(2**i)*base)))
@@ -135,7 +140,8 @@ class ebs_snapshot:
             try:
                 new_snapshot.add_tag('Attachment-Device', volume.attach_data.device.upper())
                 break
-            except boto.exception.EC2ResponseError as err:
+            except:
+                err = sys.exc_info()[0]
                 logger.exception('{num}/{max}: Failed to add tag {err}'.format(num=i+1,max=tries,err=err.message))
 
                 sleep(randint(0,min(1800,(2**i)*base)))
@@ -151,7 +157,8 @@ class ebs_snapshot:
                 try:
                     if tag_key != "Name":
                         new_snapshot.add_tag(tag_key, volume.tags[tag_key])
-                except boto.exception.EC2ResponseError as err:
+                except:
+                    err = sys.exc_info()[0]
                     logger.exception('{num}/{max}: Failed to add tag {err}'.format(num=i+1,max=tries,err=err.message))
 
                     sleep(randint(0,min(1800,(2**i)*base)))
@@ -178,7 +185,8 @@ class ebs_snapshot:
         for i in range(snpashots_to_delete):
             try:
                 sorted_snapshots[i].delete()
-            except boto.exception.EC2ResponseError as err:
+            except:
+                err = sys.exc_info()[0]
                 logger.exception('Failed to delete snapshot {snap_id}/{snap_name}: {err}'.format(snap_id=sorted_snapshots[i].id, snap_name=sorted_snapshots[i].tags['Name'], err=err.message))
                 continue
 
