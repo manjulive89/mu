@@ -1,7 +1,7 @@
 image: ruby:2.5
 
 stages:
-  - Lint Test
+  - Lint
   - Test
   - Security Test
   - Build
@@ -11,7 +11,7 @@ stages:
   - Deploy
   
 Rubocop:
-  stage: Lint Test
+  stage: Lint
   image: chef/chefdk:latest
   script:
     - rubocop modules/
@@ -19,23 +19,88 @@ Rubocop:
   allow_failure: true
 
 Cookstyle:
-  stage: Lint Test
+  stage: Lint
   image: chef/chefdk:latest
   script:
     - cookstyle cookbooks/
   allow_failure: true
 
 Foodcritic:
-  stage: Lint Test
+  stage: Lint
   image: chef/chefdk:latest
   script:
     - foodcritic cookbooks/ -t ~FC075 -t ~FC015 -t ~FC034 -t ~FC122
 
 Foodcritic Deprecations:
-  stage: Lint Test
+  stage: Lint
   image: chef/chefdk:latest
   script:
     - foodcritic cookbooks/ -t deprecated -t chef13 -t chef14 -t chef15
+
+.New_Berks:
+  stage: Lint
+  image: chef/chefdk:latest
+  script:
+    - apt-get -qq update
+    - apt-get -qq install git -y
+    - for d in `ls -1 ./cookbooks | grep -v '^firewall$'` ; do (echo && echo "Installing $d" && cd "cookbooks/$d" && berks install); done
+    - for d in `ls -1 ./cookbooks | grep -v '^firewall$'` ; do (echo && echo "Verifying $d" && cd "cookbooks/$d" && berks verify); done
+    - for d in `ls -1 ./cookbooks | grep -v '^firewall$'` ; do (echo && echo "Analyzing $d" && cd "cookbooks/$d" && berks outdated); done
+
+Mu Berks:
+  stage: Lint
+  image: chef/chefdk:latest
+  script:
+    - apt-get -qq update
+    - apt-get -qq install git -y
+    - rm -rf Berksfile.lock
+    - berks install
+    - berks verify
+    - berks outdated
+
+mu-activedirectory Berks:
+  stage: Lint
+  image: chef/chefdk:latest
+  script:
+    - apt-get -qq update
+    - apt-get -qq install git -y
+    - cd ./cookbooks/mu-activedirectory
+    - berks install
+    - berks verify
+    - berks outdated
+
+mu-master Berks:
+  stage: Lint
+  image: chef/chefdk:latest
+  script:
+    - apt-get -qq update
+    - apt-get -qq install git -y
+    - cd ./cookbooks/mu-master
+    - berks install
+    - berks verify
+    - berks outdated
+
+mu-tools Berks:
+  stage: Lint
+  image: chef/chefdk:latest
+  script:
+    - apt-get -qq update
+    - apt-get -qq install git -y
+    - cd ./cookbooks/mu-tools
+    - berks install
+    - berks verify
+    - berks outdated
+
+mu-utility Berks:
+  stage: Lint
+  image: chef/chefdk:latest
+  script:
+    - apt-get -qq update
+    - apt-get -qq install git -y
+    - cd ./cookbooks/mu-utility
+    - berks install
+    - berks verify
+    - berks outdated
 
 ChefSpec:
   stage: Test
@@ -53,71 +118,6 @@ ChefSpec:
     - cd ../
     - rspec
   allow_failure: true
-
-.New_Berks:
-  stage: Test
-  image: chef/chefdk:latest
-  script:
-    - apt-get -qq update
-    - apt-get -qq install git -y
-    - for d in `ls -1 ./cookbooks | grep -v '^firewall$'` ; do (echo && echo "Installing $d" && cd "cookbooks/$d" && berks install); done
-    - for d in `ls -1 ./cookbooks | grep -v '^firewall$'` ; do (echo && echo "Verifying $d" && cd "cookbooks/$d" && berks verify); done
-    - for d in `ls -1 ./cookbooks | grep -v '^firewall$'` ; do (echo && echo "Analyzing $d" && cd "cookbooks/$d" && berks outdated); done
-
-Mu Berks:
-  stage: Test
-  image: chef/chefdk:latest
-  script:
-    - apt-get -qq update
-    - apt-get -qq install git -y
-    - rm -rf Berksfile.lock
-    - berks install
-    - berks verify
-    - berks outdated
-
-mu-activedirectory Berks:
-  stage: Test
-  image: chef/chefdk:latest
-  script:
-    - apt-get -qq update
-    - apt-get -qq install git -y
-    - cd ./cookbooks/mu-activedirectory
-    - berks install
-    - berks verify
-    - berks outdated
-
-mu-master Berks:
-  stage: Test
-  image: chef/chefdk:latest
-  script:
-    - apt-get -qq update
-    - apt-get -qq install git -y
-    - cd ./cookbooks/mu-master
-    - berks install
-    - berks verify
-    - berks outdated
-
-mu-tools Berks:
-  stage: Test
-  image: chef/chefdk:latest
-  script:
-    - apt-get -qq update
-    - apt-get -qq install git -y
-    - cd ./cookbooks/mu-tools
-    - berks install
-    - berks verify
-    - berks outdated
-
-mu-utility Berks:
-  stage: Test
-  image: chef/chefdk:latest
-  script:
-    - apt-get -qq update
-    - apt-get -qq install git -y
-    - cd ./cookbooks/mu-utility
-    - berks install
-    - berks verify
-    - berks outdated
 
 Gem Build:
   stage: Build
