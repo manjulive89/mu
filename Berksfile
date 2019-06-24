@@ -2,15 +2,19 @@ source chef_repo: "cookbooks/"
 source "https://supermarket.chef.io"
 
 # Mu Platform Cookbooks
-cookbook 'awscli'
+
 cookbook 'mu-activedirectory'
-cookbook 'mu-splunk'
-cookbook 'mu-firewall'
-cookbook 'mu-glusterfs'
 cookbook 'mu-master'
-cookbook 'mu-mongo'
-cookbook 'mu-openvpn'
 cookbook 'mu-tools'
 cookbook 'mu-utility'
+
+# MOVED TO DEMOS
+# cookbook 'mu-splunk'
+# cookbook 'mu-mongo'
+# cookbook 'mu-openvpn'
+
+# MOVED TO FORKS
+cookbook 'firewall', '~> 2.8.0', git: "https://github.com/cloudamatic/firewall.git"
+# cookbook 'firewall', path: 'cookbooks/firewall'
+# cookbook 'mu-glusterfs'
 cookbook 'mu-nagios' , '~> 8.2.0', git: "https://github.com/cloudamatic/mu-nagios.git"
-cookbook 'firewall', path: 'cookbooks/firewall'

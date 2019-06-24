@@ -4,10 +4,10 @@ source chef_repo: ".."
 metadata
 
 # Mu Cookbooks
-cookbook 'mu-nagios' , '~> 8.2.0', git: "https://github.com/cloudamatic/mu-nagios.git"
+cookbook 'mu-nagios', '~> 8.2.0', git: "https://github.com/cloudamatic/mu-nagios.git"
 cookbook 'mu-utility'
 cookbook 'mu-tools'
-cookbook 'mu-firewall'
+cookbook 'firewall', '~> 2.8.0', git: "https://github.com/cloudamatic/firewall.git"
 cookbook 'mu-activedirectory'
 cookbook 's3fs'
 

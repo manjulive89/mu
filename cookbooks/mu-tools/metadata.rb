@@ -20,9 +20,8 @@ depends "postgresql", '~> 7.1.0'
 depends "mu-utility"
 depends "java", '~> 2.2.0'
 depends "windows", '~> 5.1.1'
-depends "mu-splunk"
 depends "chef-vault", '~> 3.1.1'
 depends "poise-python", '~> 1.7.0'
 depends "yum-epel", '~> 3.2.0'
-depends "mu-firewall"
+depends 'firewall', '~> 2.8.0'
 depends "mu-activedirectory"

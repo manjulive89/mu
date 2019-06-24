@@ -16,7 +16,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-include_recipe 'mu-firewall'
+include_recipe 'firewall'
 
 # TODO Move all mu firewall rules to a mu specific chain
 firewall_rule "MU Master default ports" do
